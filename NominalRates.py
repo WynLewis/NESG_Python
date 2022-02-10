@@ -1,6 +1,9 @@
 from scipy import stats
 import numpy as np
 from scipy import optimize
+import matplotlib.pyplot as plt
+import sys
+from scipy.optimize import minimize
 
 ver = '6.4'
 p = {}
@@ -13,11 +16,11 @@ with open("Parameters.txt") as f:
 
 t = np.array([1 / 12, 1 / 4, 1 / 2, 1, 2, 3, 5, 7, 10, 20, 30])
 y = np.matrix([
-    [0.0006, 0.0006, 0.0019, 0.0039, 0.0073, 0.0097, 0.0126, 0.0144, 0.0152, 0.0194, 0.019]
+    [0.0007, 0.0005, 0.005, 0.0008, 0.0030, 0.0057, 0.0097, 0.0127, 0.0160, 0.0210, 0.225]
 ])
 sc = np.matrix([
-    [-4.6879, -0.4661, 0.3347],
-    [0, 0, 0]
+    [-3.7542, 0.1974, 0.1291]
+
 ])
 
 
@@ -85,15 +88,32 @@ def calibrate_scores(curve, tenors):
     :param tenors:
     :return: Array of Three Scores
     """
-    def targetfunc(target, tenorvec, scorevec):
-        ESS = np.sum((target - yieldcurve(scorevec, tenorvec))**2)
-        return ESS
+    def g(x):
+        z = np.matrix([
+            [x[0], x[1], x[2]]
+        ])
+        m = yieldcurve(z, tenors)
+        ess = np.sum(np.square(curve - m)) * 1e6
+        return ess
 
-    guess = np.matrix([[0,0,0]])
-    scorevec = optimize.minimize(lambda s: targetfunc(curve, tenors, s), guess)
+    guess = np.zeros([1,3])
+    scorevec = minimize(g, guess)
     return scorevec
 
 
+output = yieldcurve(sc, t)
+model = output[0]
+actual = y[0]
+plt.plot(t, model)
+# plt.plot(tenors, actual)
+plt.show()
 test = calibrate_scores(y, t)
+
+for data in model:
+    sys.stdout.write('{:9.2%}'.format(data))
+
+print()
 print(test)
+
+
 
