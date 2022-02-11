@@ -69,13 +69,13 @@ class ShulmanProcess:
             # build up the implied experience trajectory based upon stack
             for i, d in enumerate(initialt):
                 score1[:, scenario] = score1[:, scenario] + (d >= timeindex) * initialdx[i]
-        output.append(ShulmanRates(
-            period=0,
-            scenario=scenario + 1,
-            scores=self.state,
-            tenors=self.tenors,
-            yieldcurve=yc
-        ))
+            output.append(ShulmanRates(
+                period=0,
+                scenario=scenario + 1,
+                scores=self.state,
+                tenors=self.tenors,
+                yieldcurve=yc
+            ))
         score2[0] = self.state[1]
         score3[0] = self.state[2]
 
