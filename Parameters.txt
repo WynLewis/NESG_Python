@@ -37,3 +37,7 @@
 ('6.4', 'Nominal', 'Shulman_Factor3_c'):-1.5
 ('6.4', 'Nominal', 'Shulman_Factor3_d'):0.9
 ('6.4', 'Nominal', 'Shulman_Factor3_e'):0.55
+('6.4', 'Nominal', 'Score2_Eta'):0.5
+('6.4', 'Nominal', 'Score2_Sigma'):0.5
+('6.4', 'Nominal', 'Score3_Eta'):0.15
+('6.4', 'Nominal', 'Score3_Sigma'):0.15

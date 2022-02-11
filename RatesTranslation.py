@@ -1,32 +1,12 @@
 from scipy import stats
 import numpy as np
-from scipy import optimize
-import matplotlib.pyplot as plt
-import sys
 from scipy.optimize import minimize
 
-ver = '6.4'
-p = {}
-with open("Parameters.txt") as f:
-    for line in f:
-        (key, val) = line.split(':')
-        keys = eval(key)
-        if keys[0] == ver:
-            p[keys[2]] = float(val)
 
-t = np.array([1 / 12, 1 / 4, 1 / 2, 1, 2, 3, 5, 7, 10, 20, 30])
-y = np.matrix([
-    [0.0007, 0.0005, 0.005, 0.0008, 0.0030, 0.0057, 0.0097, 0.0127, 0.0160, 0.0210, 0.225]
-])
-sc = np.matrix([
-    [-3.7542, 0.1974, 0.1291]
-
-])
-
-
-def yieldcurve(scores, tenors):
+def yieldcurve(scores, tenors, p):
     """
 
+    :param p: Parameter Dictionary
     :param scores: Matrix of Scores
     :param tenors: Array of Tenors
     :return: Matrix of yield curves for given tenors
@@ -81,9 +61,10 @@ def yieldcurve(scores, tenors):
     return rates
 
 
-def calibrate_scores(curve, tenors):
+def calibrate_scores(curve, tenors, p):
     """
 
+    :param p: parameter dictionary
     :param curve:
     :param tenors:
     :return: Array of Three Scores
@@ -92,28 +73,10 @@ def calibrate_scores(curve, tenors):
         z = np.matrix([
             [x[0], x[1], x[2]]
         ])
-        m = yieldcurve(z, tenors)
+        m = yieldcurve(z, tenors, p)
         ess = np.sum(np.square(curve - m)) * 1e6
         return ess
 
-    guess = np.zeros([1,3])
+    guess = np.zeros([1, 3])
     scorevec = minimize(g, guess)
-    return scorevec
-
-
-output = yieldcurve(sc, t)
-model = output[0]
-actual = y[0]
-plt.plot(t, model)
-# plt.plot(tenors, actual)
-plt.show()
-test = calibrate_scores(y, t)
-
-for data in model:
-    sys.stdout.write('{:9.2%}'.format(data))
-
-print()
-print(test)
-
-
-
+    return scorevec.x
