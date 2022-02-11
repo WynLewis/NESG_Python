@@ -7,9 +7,9 @@ def yieldcurve(scores, tenors, p):
     """
 
     :param p: Parameter Dictionary
-    :param scores: Matrix of Scores
+    :param scores: Array of Scores
     :param tenors: Array of Tenors
-    :return: Matrix of yield curves for given tenors
+    :return: Array of yield curves for given tenors
     """
     omega = (
             p['Shulman_Omega_a'] + (p['Shulman_Omega_b'] + p['Shulman_Omega_c'] * tenors)
@@ -48,6 +48,7 @@ def yieldcurve(scores, tenors, p):
 
     factor = np.matrix([factor1, factor2, factor3])
     k = stats.norm.cdf(scores @ factor)
+    k = k.ravel()
     l = stats.lognorm.ppf(k, beta)
 
     schulman_mean = (2 * omega - 1) * np.exp(0.5 * beta ** 2)
@@ -70,10 +71,7 @@ def calibrate_scores(curve, tenors, p):
     :return: Array of Three Scores
     """
     def g(x):
-        z = np.matrix([
-            [x[0], x[1], x[2]]
-        ])
-        m = yieldcurve(z, tenors, p)
+        m = yieldcurve(x, tenors, p)
         ess = np.sum(np.square(curve - m)) * 1e6
         return ess
 
