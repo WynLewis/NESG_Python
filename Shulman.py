@@ -7,7 +7,18 @@ import matplotlib.pyplot as plt
 from MultiFractal import MultiFractalProcess
 from OrnsteinUhlenbeck import OrnsteinUhlenbeckProcess
 from RatesTranslation import yieldcurve, calibrate_scores
+from dataclasses import dataclass
+from typing import List
 
+@dataclass
+class ShulmanPeriod:
+    """
+    """
+    period: int
+    scenario: int
+    scores: np.array
+    yieldcurve: np.array
+    
 
 class ShulmanProcess:
 
@@ -27,7 +38,7 @@ class ShulmanProcess:
         self.SCORE2_Process = OrnsteinUhlenbeckProcess(p['Score2_Eta'], p['Score2_Sigma'])
         self.SCORE3_Process = OrnsteinUhlenbeckProcess(p['Score3_Eta'], p['Score3_Sigma'])
 
-    def simulatepath(self, t0, x0, t, dt, numscenarios=1, stacksize=-1):
+    def simulatepath(self, t0, x0, t, dt, numscenarios=1, stacksize=-1) -> List[ShulmanPeriod]:
         # You can just enter np.array([0]),np.array([X0]) if there is no history available
 
         # t          length of simulated path (years)
@@ -56,6 +67,7 @@ class ShulmanProcess:
 
         score2[0] = x0[1]
         score3[0] = x0[2]
+        output = []
         for period in range(1, numperiods):
             d = stats.lomax.rvs(self.SCORE1_Process.alpha - 1, scale=self.SCORE1_Process.theta, size=numscenarios)
             v = self.SCORE1_Process.sigma * d ** self.SCORE1_Process.gamma  # set increment volatility
@@ -70,7 +82,13 @@ class ShulmanProcess:
                                 period + np.int(d[scenario] / dt))  # determine the end point for the increment
                 score1[period:endperiod, scenario] = score1[period:endperiod, scenario] + dx[
                     scenario]  # apply the increment
+                yc = yieldcurve(s1, s2, s3)
                 
-
+                output.append(ShulmanPeriod(
+                    period = period,
+                    scenario = scenario,
+                    scores = np.array(1,2,3),
+                    yieldcurve = yc
+                    ))
             print()
-        return timeindex, xbuild
+        return output
