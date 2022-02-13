@@ -23,9 +23,24 @@ num_years = 40
 num_scen = 25
 nominalprocess = ShulmanProcess(t, p, init_state)
 nominalrates = nominalprocess.simulatepath(num_years, dt, num_scen, -1)
-# BEY10 = [x.yieldcurve[9] for x in nominalrates]
-# BEY10 = np.reshape(BEY10,(-1,num_scen))
-
+numperiods = int(num_years / dt) + 1
+timeindex = dt * np.array(range(0, numperiods))
+BEY10 = [x.yieldcurve[8] for x in nominalrates]
+BEY10 = np.reshape(BEY10, (-1, num_scen))
+score1 = [x.scores[0] for x in nominalrates]
+score1 = np.reshape(score1, (-1, num_scen))
+fig, axs = plt.subplots(2, 2)
+axs[0, 0].plot(timeindex, np.percentile(BEY10, 50, 1), label='50th')
+# axs[0, 0].text(5, .01, f'Long Term Median is {np.percentile(BEY10[numperiods-1], 50):,.2%}')
+axs[0, 0].set_title("BEY 10 Percentiles:  50th")
+# axs[0, 0].legend()
+axs[0, 1].plot(timeindex, np.percentile(BEY10, 1, 1), label='1st')
+# axs[0, 1].text(5, .01, f'Long Term 1st is {np.percentile(BEY10[numperiods-1], 1):,.2%}')
+axs[0, 1].set_title("BEY 10 Percentiles:  1st")
+# axs[0, 1].legend()
+axs[1, 0].hist(BEY10[numperiods-1], density=True)
+axs[1, 1].hist(score1[numperiods-1], density=True)
+plt.show()
 et = time()
 print()
 print('Elapsed time was %3.2f seconds.' % (et - st))

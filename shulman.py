@@ -13,8 +13,6 @@ from typing import List
 
 @dataclass
 class ShulmanRates:
-    """
-    """
     scenario: int
     period: int
     scores: np.array
@@ -24,13 +22,14 @@ class ShulmanRates:
 
 class ShulmanProcess:
 
-    # Load distribution parameters from class instantiation
     def __init__(self, tenors, p, state, time=np.array([0])):
-        # α  [0,inf] controls the  long-term persistence of initial conditions (tail weight)
-        #           <1 is infinite variance, <2 is infinite mean
-        # θ  [0, inf] controls the short-term mean-reversion of initial conditions
-        # σ  [0, inf] controls process volatility level
-        # γ  [-0.5, inf] controls relationship between memory length and volatility
+        """
+
+        :param tenors:
+        :param p:
+        :param state:
+        :param time:
+        """
 
         self.tenors = tenors
         self.p = p
@@ -42,14 +41,14 @@ class ShulmanProcess:
         self.SCORE3_Process = OrnsteinUhlenbeckProcess(p['Score3_Eta'], p['Score3_Sigma'])
 
     def simulatepath(self, t, dt, numscenarios=1, stacksize=-1) -> List[ShulmanRates]:
-        # You can just enter np.array([0]),np.array([X0]) if there is no history available
+        """
 
-        # t          length of simulated path (years)
-        # dt         timestep of simulated path
-        # numscenarios          number of paths to generate
-        # stacksize  number of elements in random stack
-
-        # RETURN time index column vector, N simulated path column vectors as matrix
+        :param t:
+        :param dt:
+        :param numscenarios:
+        :param stacksize:
+        :return:
+        """
 
         numperiods = np.int(t / dt) + 1
         timeindex = dt * np.array(range(0, numperiods))

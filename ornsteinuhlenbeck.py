@@ -10,25 +10,25 @@ class OrnsteinUhlenbeckProcess:
 
     # Load distribution parameters from class instantiation
     def __init__(self, eta, sigma):
-        # α  [0,inf] controls the  long-term persistence of initial conditions (tail weight)
-        #           <1 is infinite variance, <2 is infinite mean
-        # θ  [0, inf] controls the short-term mean-reversion of initial conditions
-        # σ  [0, inf] controls process volatility level
-        # γ  [-0.5, inf] controls relationship between memory length and volatility
+        """
+
+        :param eta:
+        :param sigma:
+        """
 
         self.eta = eta
         self.sigma = sigma
         self.kappa = -0.5 * (eta / sigma) ** 2
 
     def simulatepath(self, x0, t, dt, numscenarios=1):
-        # You can just enter np.array([0]),np.array([X0]) if there is no history available
+        """
 
-        # t          length of simulated path (years)
-        # dt         timestep of simulated path
-        # numscenarios          number of paths to generate
-        # stacksize  number of elements in random stack
-
-        # RETURN time index column vector, N simulated path column vectors as matrix
+        :param x0:
+        :param t:
+        :param dt:
+        :param numscenarios:
+        :return:
+        """
 
         numperiods = np.int(t / dt) + 1
         timeindex = dt * np.array(range(0, numperiods))

@@ -8,13 +8,15 @@ import matplotlib.pyplot as plt
 
 class MultiFractalProcess:
 
-    # Load distribution parameters from class instantiation
-    def __init__(self, alpha, theta, sigma, gamma):
-        # α  [0,inf] controls the  long-term persistence of initial conditions (tail weight)
-        #           <1 is infinite variance, <2 is infinite mean
-        # θ  [0, inf] controls the short-term mean-reversion of initial conditions
-        # σ  [0, inf] controls process volatility level
-        # γ  [-0.5, inf] controls relationship between memory length and volatility
+    def __init__(self, alpha: float, theta: float, sigma: float, gamma: float):
+        """
+
+        :param alpha: [0,inf] controls the  long-term persistence of initial conditions (tail weight)
+             <1 is infinite variance, <2 is infinite mean
+        :param theta: [0, inf] controls the short-term mean-reversion of initial conditions
+        :param sigma: [0, inf] controls process volatility level
+        :param gamma: [-0.5, inf] controls relationship between memory length and volatility
+        """
 
         self.alpha = alpha
         self.theta = theta
@@ -23,29 +25,42 @@ class MultiFractalProcess:
 
     # Definition of recovery function (percentage mean-reversion curve)
     def recoverycurve(self, s):
+        """
+
+        :param s:
+        :return:
+        """
         return 1 - (self.theta / (s + self.theta)) ** (self.alpha - 1)
 
     def randomstack(self, x0, stacksize=1500):
-        # n   number of stack elements
-        # X0  initial condition
+        """
 
-        # RETURN stack state variables as duration column vector, increment column vector
+        :param x0:
+        :param stacksize:
+        :return:
+        """
 
         n = self.theta / (self.alpha - 1)
 
-        d = stats.lomax.rvs(self.alpha - 1, scale=self.theta, size=stacksize)  # simulate elapsed time
-        t = stats.lomax.rvs(self.alpha, scale=(d + self.theta), size=stacksize)  # simulate remaining time
+        d = stats.lomax.rvs(self.alpha - 1, scale=self.theta, size=stacksize)
+        t = stats.lomax.rvs(self.alpha, scale=(d + self.theta), size=stacksize)
 
         v = self.sigma * (d + t) ** self.gamma
 
-        dx = v * stats.norm.rvs(size=stacksize) / stacksize  # draw normal increments
-        dx = dx + (x0 - sum(dx)) / stacksize  # recenter to current state
+        dx = v * stats.norm.rvs(size=stacksize) / stacksize
+        dx = dx + (x0 - sum(dx)) / stacksize
 
         return t, dx
 
-        # simulate increment duration, conditioned by increment size
+
 
     def conditionalexpiry(self, dx, dt):
+        """
+
+        :param dx:
+        :param dt:
+        :return:
+        """
         c = -.5 * (dx / self.sigma) ** 2 / dt
         m = optimize.brentq(lambda t: self.theta + 2 * C * t ** (2 * self.gamma) * (t + self.theta), 0, 500)
 
@@ -59,15 +74,15 @@ class MultiFractalProcess:
 
     # Create a random stack of state variables consistent with historical process trajectory
     def historicalstack(self, t, X, stacksize=1500):
-        # t   time index of historical data points, in ascending sequence, last value = X0
-        # X   process value at each historical time index
-        # You can just enter np.array([0]),np.array([X0]) if there is no history available
+        """
 
-        # stacksize  number of elments in random stack
+        :param t:
+        :param X:
+        :param stacksize:
+        :return:
+        """
 
-        # RETURN stack state variables as duration column vector, increment column vector
-
-        t = t - t[0]  # index time to beginning of experience period
+        t = t - t[0]
         initialt, initialdx = self.randomstack(X[0], stacksize)  # set random stack prior to experience period
 
         # build up the implied experience trajectory based upon random stack
@@ -95,14 +110,24 @@ class MultiFractalProcess:
 
         return d, dx
 
-    def simulatepath(self, t0, x0, t, dt, numscenarios=1, stacksize=-1):
-        # t time    index of historical data points, in ascending sequence, last value = X0
-        # X state   value at each historical time index
+    def simulatepath(self,x0, t, dt, t0=np.array([0]), numscenarios=1, stacksize=-1):
+        """
+
+        :param t0: index of historical data points, in ascending sequence, last value = X0
+        :param x0: value at each historical time index
+        :param t: length of simulated path (years)
+        :param dt: timestep of simulated path
+        :param numscenarios: number of paths to generate
+        :param stacksize: number of elements in random stack
+        :return: time index column vector, N simulated path column vectors as matrix
+        """
+        # t time
+        # X state
         # You can just enter np.array([0]),np.array([X0]) if there is no history available
 
-        # t          length of simulated path (years)
-        # dt         timestep of simulated path
-        # numscenarios          number of paths to generate
+        # t
+        # dt
+        # numscenarios
         # stacksize  number of elements in random stack
 
         # RETURN time index column vector, N simulated path column vectors as matrix
