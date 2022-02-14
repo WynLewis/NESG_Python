@@ -9,6 +9,7 @@ from ornsteinuhlenbeck import OrnsteinUhlenbeckProcess
 from ratestranslation import yieldcurve, calibrate_scores
 from dataclasses import dataclass
 from typing import List
+import pandas as pd
 
 
 @dataclass
@@ -49,58 +50,50 @@ class ShulmanProcess:
         :param stacksize:
         :return:
         """
-
         numperiods = np.int(t / dt) + 1
         timeindex = dt * np.array(range(0, numperiods))
-        score1 = np.zeros((numperiods, numscenarios))
-        score2 = np.zeros((numperiods, numscenarios))
-        score3 = np.zeros((numperiods, numscenarios))
+        score1 = np.zeros((numscenarios, numperiods))
+        score2 = np.zeros((numscenarios, numperiods))
+        score3 = np.zeros((numscenarios, numperiods))
+        
         output = []
-        yc = yieldcurve(self.state, self.tenors, self.p)
-
+        yc = yieldcurve(self.state, self.factors)
+        output.append([1, 0, self.state[0], self.state[1], self.state[2], *yc])
         if stacksize == -1:
             stacksize = np.int(self.SCORE1_Process.theta / (self.SCORE1_Process.alpha - 1) / dt)
-
-        # load each scenario with random stack
         initialt, initialdx = self.SCORE1_Process.historicalstack(self.time, self.state, stacksize)
-        for scenario in range(0, numscenarios):
-            # set history-adjusted stack prior to simulation period
-            # build up the implied experience trajectory based upon stack
-            for i, d in enumerate(initialt):
-                score1[:, scenario] = score1[:, scenario] + (d >= timeindex) * initialdx[i]
-            output.append(ShulmanRates(
-                period=0,
-                scenario=scenario + 1,
-                scores=self.state,
-                tenors=self.tenors,
-                yieldcurve=yc
-            ))
-        score2[0] = self.state[1]
-        score3[0] = self.state[2]
+        score1[:, :stacksize] = score1[:, :stacksize] + (initialt >= timeindex[:stacksize]) * initialdx[:stacksize]
+		
+		score2[0] = self.state[1]
+		score3[0] = self.state[2]
 
-        for period in range(1, numperiods):
-            d = stats.lomax.rvs(self.SCORE1_Process.alpha - 1, scale=self.SCORE1_Process.theta, size=numscenarios)
-            v = self.SCORE1_Process.sigma * d ** self.SCORE1_Process.gamma  # set increment volatility
-            dx = v * stats.norm.rvs(size=numscenarios) * np.sqrt(dt)  # draw normal increments
-            score2[period] = score2[period - 1] + self.SCORE2_Process.kappa * score2[period - 1] * dt + \
-                             self.SCORE2_Process.eta * stats.norm.rvs(size=numscenarios) * np.sqrt(dt)
-            score3[period] = score3[period - 1] + self.SCORE3_Process.kappa * score3[period - 1] * dt + \
-                             self.SCORE3_Process.eta * stats.norm.rvs(size=numscenarios) * np.sqrt(dt)
-            # apply the simulated increments to build the process values
-            for scenario in range(0, numscenarios):
-                endperiod = min(numperiods,
-                                period + np.int(d[scenario] / dt))  # determine the end point for the increment
-                score1[period:endperiod, scenario] = score1[period:endperiod, scenario] + dx[
-                    scenario]  # apply the increment
-                yc = yieldcurve(np.array((score1[period, scenario], score2[period, scenario],
-                                          score3[period, scenario])), self.tenors, self.p)
+		d = stats.lomax.rvs(self.SCORE1_Process.alpha - 1, scale=self.SCORE1_Process.theta, size=(numscenarios, numperiods))
+		v = self.SCORE1_Process.sigma * d ** self.SCORE1_Process.gamma  # set increment volatility
+		dx = v * stats.norm.rvs(size=(numscenarios, numperiods)) * np.sqrt(dt)  # draw normal increments
+		for period in range(1, numperiods):
 
-                output.append(ShulmanRates(
-                    period=period,
-                    scenario=scenario+1,
-                    scores=np.array((score1[period, scenario], score2[period, scenario],
-                                     score3[period, scenario])),
-                    tenors = self.tenors,
-                    yieldcurve=yc
-                ))
-        return output
+			score2[:,period] = score2[:, period - 1] + self.SCORE2_Process.kappa * score2[:, period - 1] * dt + \
+							 self.SCORE2_Process.eta * stats.norm.rvs(size=numscenarios) * np.sqrt(dt)
+			score3[:, period] = score3[:, period - 1] + self.SCORE3_Process.kappa * score3[:, period - 1] * dt + \
+							 self.SCORE3_Process.eta * stats.norm.rvs(size=numscenarios) * np.sqrt(dt)
+
+			endperiod = np.minimum(numperiods, period + (d[:, period] / dt)).astype(int)
+			for scenario in range(0, numscenarios):
+				score1[scenario, period:endperiod[scenario]] = score1[scenario, period:endperiod[scenario]] + dx[scenario, period]  # apply the increment
+				
+			scores = np.vstack([
+				score1[:, period],
+				score2[:, period],
+				score3[:, period]]).T
+
+			ycs = yieldcurve(scores, self.factors)
+
+			# TODO return array of scores, ycs, indexed for scenario and period and tenor
+			for ii, (curve,sc) in enumerate(zip(ycs,scores)):
+				output.append([ii+1, period,*sc , *curve])
+
+		df = pd.DataFrame(
+			columns = "Period Scenario Score1 Score2 Score3".split().extend(self.tenors),
+			data = output)
+
+		return df
