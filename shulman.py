@@ -7,7 +7,7 @@ from scipy import stats
 
 from multifractal import MultiFractalProcess
 from ornsteinuhlenbeck import OrnsteinUhlenbeckProcess
-from yieldcurve import ShulmanFactors, calibrate_scores, yieldcurve
+from yieldcurve import ShulmanFactors, yieldcurve
 
 
 @dataclass
@@ -31,6 +31,7 @@ class ShulmanProcess:
         """
 
         self.tenors = tenors
+        self.tenormap = {tenor: f'BEY{tenor:,g}' for tenor in self.tenors}
         self.p = p
         self.factors = ShulmanFactors(tenors, p)
         self.time = time
@@ -40,7 +41,7 @@ class ShulmanProcess:
         self.SCORE2_Process = OrnsteinUhlenbeckProcess(p['Score2_Eta'], p['Score2_Sigma'])
         self.SCORE3_Process = OrnsteinUhlenbeckProcess(p['Score3_Eta'], p['Score3_Sigma'])
 
-    def simulatepath(self, t, dt, numscenarios=1, stacksize=-1):
+    def simulatepath(self, t, dt, numscenarios=1, stacksize=-1) -> List[ShulmanRates]:
         """
 
         :param t:
@@ -57,14 +58,17 @@ class ShulmanProcess:
 
         output = []
         yc = yieldcurve(self.state, self.factors)
-        output.append([1, 0, self.state[0], self.state[1], self.state[2], *yc])
+        for scen in range(numscenarios):
+            output.append([scen+1, 0, self.state[0], self.state[1], self.state[2], *yc])
 
         if stacksize == -1:
             stacksize = np.int(self.SCORE1_Process.theta / (self.SCORE1_Process.alpha - 1) / dt)
 
         initialt, initialdx = self.SCORE1_Process.historicalstack(self.time, self.state, stacksize)
 
-        score1[:, :stacksize] = score1[:, :stacksize] + (initialt >= timeindex[:stacksize]) * initialdx[:stacksize]
+        score1[:] =  np.sum(((np.tile(initialt.reshape(stacksize,1), numperiods)) >= 
+                             (np.repeat(timeindex.reshape(numperiods,1).T,stacksize,axis=0))) * 
+                            (np.tile((initialdx.reshape(stacksize,1)), numperiods)), axis=0)        
         score2[0] = self.state[1]
         score3[0] = self.state[2]
         d = stats.lomax.rvs(self.SCORE1_Process.alpha - 1, scale=self.SCORE1_Process.theta,
@@ -86,11 +90,13 @@ class ShulmanProcess:
                 score3[:, period]]).T
             ycs = yieldcurve(scores, self.factors)
 
-            # TODO return array of scores, ycs, indexed for scenario and period and tenor
             for ii, (curve, sc) in enumerate(zip(ycs, scores)):
                 output.append([ii + 1, period, *sc, *curve])
-
-        df = pd.DataFrame(
-            columns="Period Scenario Score1 Score2 Score3".split().extend(self.tenors),
+                
+        columns = "Scenario Period Score1 Score2 Score3".split()
+        for tenor in self.tenors:
+            columns.append(self.tenormap[tenor])
+        df = pd.DataFrame(  
+            columns=columns,
             data=output)
         return df
